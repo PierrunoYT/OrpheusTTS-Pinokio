@@ -173,7 +173,7 @@ def redistribute_codes(code_list, snac_model):
 def synthesize(text: str, voice: str, temperature: float, top_p: float, repetition_penalty: float, max_new_tokens: int):
     """Generate speech from text using Orpheus TTS"""
     if not text or not text.strip():
-        return None, "Bitte Text eingeben."
+        return None, "Please enter text."
 
     try:
         # Load models if not already loaded
@@ -213,41 +213,41 @@ def synthesize(text: str, voice: str, temperature: float, top_p: float, repetiti
         # Save audio file
         sf.write(str(out_wav), audio_samples, 24000)
         
-        return str(out_wav), "Fertig!"
+        return str(out_wav), "Done!"
         
     except Exception as e:
         print(f"Error in synthesis: {e}")
         import traceback
         traceback.print_exc()
-        return None, f"Fehler bei der Synthese: {e}"
+        return None, f"Error during synthesis: {e}"
 
 # Gradio Interface
-with gr.Blocks(title="Orpheus TTS – Standalone (Direct GGUF)") as demo:
+with gr.Blocks(title="Orpheus TTS – Standalone") as demo:
     gr.Markdown(
         """
-        # Orpheus TTS – Standalone (Direct Model)
-        Dieses UI nutzt Orpheus TTS direkt ohne LM Studio.
+        # Orpheus TTS – Standalone
+        This UI uses Orpheus TTS directly without LM Studio.
 
-        **Modelle die heruntergeladen werden:**
-        - Orpheus TTS Model: PierrunoYT/orpheus-3b-0.1-ft (public - keine Authentifizierung erforderlich)
+        **Models that will be downloaded:**
+        - Orpheus TTS Model: PierrunoYT/orpheus-3b-0.1-ft (public - no authentication required)
         - SNAC Audio Codec: hubertsiuzdak/snac_24khz (public)
         
-        Beim ersten Start werden die Modelle automatisch heruntergeladen (~3-6GB).
+        On first run, models will be automatically downloaded (~3-6GB).
         """
     )
 
     with gr.Row():
-        text = gr.Textbox(label="Text", placeholder="Gib hier deinen Text ein…", lines=4)
+        text = gr.Textbox(label="Text", placeholder="Enter your text here…", lines=4)
     with gr.Row():
-        voice = gr.Dropdown(VOICES, value="tara", label="Stimme")
+        voice = gr.Dropdown(VOICES, value="tara", label="Voice")
     with gr.Row():
         temperature = gr.Slider(minimum=0.1, maximum=1.5, value=0.6, step=0.05, label="Temperature")
         top_p = gr.Slider(minimum=0.1, maximum=1.0, value=0.95, step=0.05, label="Top-p")
         repetition_penalty = gr.Slider(minimum=1.0, maximum=2.0, value=1.1, step=0.05, label="Repetition Penalty")
         max_new_tokens = gr.Slider(minimum=100, maximum=4000, value=2700, step=100, label="Max New Tokens")
 
-    run_btn = gr.Button("In Sprache umwandeln (WAV generieren)")
-    out_audio = gr.Audio(label="Ergebnis (WAV)", type="filepath")
+    run_btn = gr.Button("Convert to Speech (Generate WAV)")
+    out_audio = gr.Audio(label="Result (WAV)", type="filepath")
     out_status = gr.Markdown()
 
     def _on_click(text, voice, temperature, top_p, repetition_penalty, max_new_tokens):
