@@ -8,7 +8,7 @@ module.exports = {
         venv: "env",                // Edit this to customize the venv folder path
         message: [
           "uv pip install wheel",
-          "uv pip install llama-cpp"
+          "uv pip install llama-cpp-python"
         ],
       }
     },
