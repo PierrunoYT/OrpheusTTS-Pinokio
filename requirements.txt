@@ -1,0 +1,19 @@
+# Core dependencies for Orpheus TTS
+torch>=2.0.0
+numpy>=1.24.0
+soundfile>=0.12.0
+
+# Machine Learning and Model Libraries  
+snac>=1.0.0
+transformers>=4.30.0
+huggingface_hub>=0.16.0
+
+# Web Interface
+gradio>=4.0.0
+
+# Standard Library Dependencies (included for completeness)
+# pathlib - built into Python 3.4+
+# datetime - built into Python standard library
+# re - built into Python standard library
+# os - built into Python standard library
+# sys - built into Python standard library
