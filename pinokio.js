@@ -1,9 +1,9 @@
 const path = require('path')
 module.exports = {
   version: "3.7",
-  title: "<TITLE>",
-  description: "",
-  icon: "<ICON>",
+  title: "OrpheusTTS",
+  description: "Standalone Text-to-Speech application using Orpheus TTS with Gradio interface",
+  icon: "icon.png",
   menu: async (kernel, info) => {
     let installed = info.exists("env")
     let running = {
