@@ -1,6 +1,6 @@
-# Orpheus TTS - Standalone Implementation
+# Orpheus TTS - Standalone Implementation (GGUF)
 
-A standalone Text-to-Speech application using Orpheus TTS that works directly with Hugging Face models without requiring LM Studio or authentication.
+A standalone Text-to-Speech application using Orpheus TTS with GGUF model format for efficient inference, working directly with Hugging Face models without requiring LM Studio or authentication.
 
 ## Features
 
@@ -37,7 +37,7 @@ venv\Scripts\activate
 ### Step 3: Install Dependencies
 
 ```bash
-pip install torch numpy soundfile snac transformers huggingface_hub gradio
+pip install torch numpy soundfile snac transformers huggingface_hub gradio llama-cpp-python
 ```
 
 **Required packages:**
@@ -48,6 +48,7 @@ pip install torch numpy soundfile snac transformers huggingface_hub gradio
 - `transformers` - Hugging Face transformers library
 - `huggingface_hub` - Hugging Face model hub
 - `gradio` - Web interface
+- `llama-cpp-python` - GGUF model inference
 
 ### Step 4: Run the Application
 
@@ -73,12 +74,14 @@ The application will start and display:
 
 ## Model Information
 
-### Orpheus TTS Model
-- **Model ID:** `PierrunoYT/orpheus-3b-0.1-ft`
-- **Type:** Public Hugging Face model (no authentication required)
-- **Size:** ~6GB
+### Orpheus TTS Model (GGUF)
+- **Model ID:** `unsloth/orpheus-3b-0.1-ft-GGUF`
+- **File:** `orpheus-3b-0.1-ft-F16.gguf`
+- **Type:** Public Hugging Face GGUF model (no authentication required)
+- **Size:** ~1.5GB (F16 quantized)
 - **License:** Apache 2.0
 - **Voices:** 8 different voices available
+- **Tokenizer:** `unsloth/orpheus-3b-0.1-ft` (for text processing)
 
 ### SNAC Audio Codec
 - **Model ID:** `hubertsiuzdak/snac_24khz`
@@ -105,10 +108,10 @@ The application will start and display:
 - **Max New Tokens (100-4000):** Maximum length of generated audio
 
 ### Performance Notes
-- **First run:** Models will be downloaded automatically (~3-6GB total)
+- **First run:** Models will be downloaded automatically (~1.5-2GB total for GGUF)
 - **GPU recommended:** CUDA-enabled GPU will significantly speed up generation
-- **CPU fallback:** Works on CPU but slower generation times
-- **Memory:** Requires ~8GB RAM minimum, 16GB recommended
+- **CPU fallback:** GGUF format provides better CPU performance than standard models
+- **Memory:** Requires ~4GB RAM minimum, 8GB recommended (reduced due to GGUF efficiency)
 
 ## File Structure
 
@@ -155,15 +158,19 @@ ModuleNotFoundError: No module named 'snac'
 You can set these environment variables to customize default settings:
 
 ```bash
-set ORPHEUS_MODEL=PierrunoYT/orpheus-3b-0.1-ft
+set ORPHEUS_REPO=unsloth/orpheus-3b-0.1-ft-GGUF
+set ORPHEUS_FILENAME=orpheus-3b-0.1-ft-F16.gguf
+set TOKENIZER_REPO=unsloth/orpheus-3b-0.1-ft
 set SNAC_MODEL=hubertsiuzdak/snac_24khz
 ```
 
 ### Custom Model Paths
-Edit `app_standalone.py` to use local model paths:
+Edit `app.py` to use local model paths:
 
 ```python
-DEFAULT_MODEL_PATH = "path/to/your/local/model"
+ORPHEUS_REPO_ID = "path/to/your/gguf/repo"
+ORPHEUS_FILENAME = "your-model.gguf"
+TOKENIZER_REPO_ID = "path/to/your/tokenizer/repo"
 SNAC_MODEL_PATH = "path/to/your/snac/model"
 ```
 
@@ -175,7 +182,8 @@ This project uses models with their respective licenses:
 
 ## Credits
 
-- **Orpheus TTS:** PierrunoYT (https://huggingface.co/PierrunoYT/orpheus-3b-0.1-ft)
+- **Orpheus TTS GGUF:** Unsloth (https://huggingface.co/unsloth/orpheus-3b-0.1-ft-GGUF)
+- **Original Orpheus TTS:** Unsloth (https://huggingface.co/unsloth/orpheus-3b-0.1-ft)
 - **SNAC Codec:** Hubert Siuzdak (https://huggingface.co/hubertsiuzdak/snac_24khz)
 - **Implementation:** Based on ComfyUI-Orpheus-TTS by ShmuelRonen
 

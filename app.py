@@ -12,16 +12,19 @@ import re
 try:
     from snac import SNAC
     from transformers import AutoModelForCausalLM, AutoTokenizer
-    from huggingface_hub import snapshot_download, login
+    from huggingface_hub import snapshot_download, login, hf_hub_download
+    from llama_cpp import Llama
     IMPORTS_SUCCESSFUL = True
 except ImportError as e:
     print(f"Error importing required libraries: {e}")
-    print("Please install: pip install snac transformers huggingface_hub soundfile")
+    print("Please install: pip install snac transformers huggingface_hub soundfile llama-cpp-python")
     IMPORTS_SUCCESSFUL = False
 
 # === Konfiguration ===
-# Orpheus model path (Hugging Face model ID or local path)
-DEFAULT_MODEL_PATH = os.environ.get("ORPHEUS_MODEL", "PierrunoYT/orpheus-3b-0.1-ft")
+# Orpheus model configuration
+ORPHEUS_REPO_ID = os.environ.get("ORPHEUS_REPO", "unsloth/orpheus-3b-0.1-ft-GGUF")
+ORPHEUS_FILENAME = os.environ.get("ORPHEUS_FILENAME", "orpheus-3b-0.1-ft-F16.gguf")
+TOKENIZER_REPO_ID = os.environ.get("TOKENIZER_REPO", "unsloth/orpheus-3b-0.1-ft")  # For tokenizer
 SNAC_MODEL_PATH = os.environ.get("SNAC_MODEL", "hubertsiuzdak/snac_24khz")
 
 # Ausgabeverzeichnis für WAVs
@@ -62,25 +65,40 @@ def load_models():
         print("Loading SNAC model...")
         snac_model = SNAC.from_pretrained(SNAC_MODEL_PATH).eval()
         snac_model = snac_model.to(device)
-        
-        # Load Orpheus model and tokenizer
-        print("Loading Orpheus model and tokenizer...")
-        orpheus_model = AutoModelForCausalLM.from_pretrained(
-            DEFAULT_MODEL_PATH, 
-            torch_dtype=torch.bfloat16
+
+        # Download GGUF model file
+        print(f"Downloading GGUF model from {ORPHEUS_REPO_ID}/{ORPHEUS_FILENAME}...")
+        model_path = hf_hub_download(
+            repo_id=ORPHEUS_REPO_ID,
+            filename=ORPHEUS_FILENAME,
+            cache_dir="./models"
         )
-        orpheus_model.to(device)
-        tokenizer = AutoTokenizer.from_pretrained(DEFAULT_MODEL_PATH)
-        
+        print(f"Model downloaded to: {model_path}")
+
+        # Load GGUF model with llama-cpp-python
+        print("Loading Orpheus GGUF model...")
+        n_gpu_layers = -1 if device == "cuda" else 0  # Use all GPU layers if CUDA available
+        orpheus_model = Llama(
+            model_path=model_path,
+            n_gpu_layers=n_gpu_layers,
+            verbose=False,
+            n_ctx=4096,  # Context window
+            n_threads=4,  # CPU threads
+        )
+
+        # Load tokenizer from the original repo (non-GGUF)
+        print("Loading tokenizer...")
+        tokenizer = AutoTokenizer.from_pretrained(TOKENIZER_REPO_ID)
+
         LOADED_MODELS = {
             "snac_model": snac_model,
             "orpheus_model": orpheus_model,
             "tokenizer": tokenizer,
             "device": device
         }
-        
+
         print("Models loaded successfully!")
-        
+
     except Exception as e:
         print(f"Error loading models: {e}")
         raise e
@@ -184,22 +202,28 @@ def synthesize(text: str, voice: str, temperature: float, top_p: float, repetiti
         tokenizer = LOADED_MODELS["tokenizer"]
         device = LOADED_MODELS["device"]
         
-        # Process the prompt
-        input_ids, attention_mask = process_prompt(text, voice, tokenizer, device)
-        
-        # Generate tokens
-        with torch.no_grad():
-            generated_ids = orpheus_model.generate(
-                input_ids=input_ids,
-                attention_mask=attention_mask,
-                max_new_tokens=max_new_tokens,
-                do_sample=True,
-                temperature=temperature,
-                top_p=top_p,
-                repetition_penalty=repetition_penalty,
-                num_return_sequences=1,
-                eos_token_id=128258,
-            )
+        # Process the prompt for GGUF model
+        prompt = f"{voice}: {text}"
+
+        # Add special tokens manually
+        start_token = tokenizer.decode([128259])  # Start of human
+        end_tokens = tokenizer.decode([128009, 128260])  # End of text, End of human
+        full_prompt = start_token + prompt + end_tokens
+
+        # Generate tokens using llama-cpp-python
+        output = orpheus_model(
+            full_prompt,
+            max_tokens=max_new_tokens,
+            temperature=temperature,
+            top_p=top_p,
+            repeat_penalty=repetition_penalty,
+            stop=[tokenizer.decode([128258])],  # Stop token
+            echo=True  # Include prompt in output
+        )
+
+        # Extract generated text and convert to token IDs
+        generated_text = output['choices'][0]['text']
+        generated_ids = torch.tensor([tokenizer.encode(generated_text)], dtype=torch.int64)
         
         # Parse output and generate audio
         code_list = parse_output(generated_ids)
@@ -225,14 +249,15 @@ def synthesize(text: str, voice: str, temperature: float, top_p: float, repetiti
 with gr.Blocks(title="Orpheus TTS – Standalone") as demo:
     gr.Markdown(
         """
-        # Orpheus TTS – Standalone
-        This UI uses Orpheus TTS directly without LM Studio.
+        # Orpheus TTS – Standalone (GGUF)
+        This UI uses Orpheus TTS with GGUF model format for efficient inference.
 
         **Models that will be downloaded:**
-        - Orpheus TTS Model: PierrunoYT/orpheus-3b-0.1-ft (public - no authentication required)
+        - Orpheus TTS Model: unsloth/orpheus-3b-0.1-ft-GGUF (F16 GGUF format)
         - SNAC Audio Codec: hubertsiuzdak/snac_24khz (public)
-        
-        On first run, models will be automatically downloaded (~3-6GB).
+        - Tokenizer: unsloth/orpheus-3b-0.1-ft (for text processing)
+
+        On first run, models will be automatically downloaded (~1.5-2GB for GGUF).
         """
     )
 
