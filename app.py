@@ -24,9 +24,9 @@ except ImportError as e:
 # Model configurations
 MODELS = {
     "english": {
-        "repo_id": os.environ.get("ORPHEUS_REPO", "unsloth/orpheus-3b-0.1-ft-GGUF"),
-        "filename": os.environ.get("ORPHEUS_FILENAME", "orpheus-3b-0.1-ft-F16.gguf"),
-        "tokenizer_repo": os.environ.get("TOKENIZER_REPO", "unsloth/orpheus-3b-0.1-ft"),
+        "repo_id": os.environ.get("ORPHEUS_REPO", "lex-au/Orpheus-3b-FT-Q8_0.gguf"),
+        "filename": os.environ.get("ORPHEUS_FILENAME", "Orpheus-3b-FT-Q8_0.gguf"),
+        "tokenizer_repo": os.environ.get("TOKENIZER_REPO", "lex-au/Orpheus-3b-FT-Q8_0.gguf"),
         "voices": ["tara", "leah", "jess", "leo", "dan", "mia", "zac", "zoe"]
     },
     "german": {
@@ -46,6 +46,24 @@ MODELS = {
         "filename": "Orpheus-3b-French-FT-Q8_0.gguf",
         "tokenizer_repo": "lex-au/Orpheus-3b-French-FT-Q8_0.gguf",
         "voices": ["Pierre", "Amelie", "Marie"]
+    },
+    "korean": {
+        "repo_id": "lex-au/Orpheus-3b-Korean-FT-Q8_0.gguf",
+        "filename": "Orpheus-3b-Korean-FT-Q8_0.gguf",
+        "tokenizer_repo": "lex-au/Orpheus-3b-Korean-FT-Q8_0.gguf",
+        "voices": ["유나", "준서"]
+    },
+    "chinese": {
+        "repo_id": "lex-au/Orpheus-3b-Chinese-FT-Q8_0.gguf",
+        "filename": "Orpheus-3b-Chinese-FT-Q8_0.gguf",
+        "tokenizer_repo": "lex-au/Orpheus-3b-Chinese-FT-Q8_0.gguf",
+        "voices": ["长乐", "白芷"]
+    },
+    "hindi": {
+        "repo_id": "lex-au/Orpheus-3b-Hindi-FT-Q8_0.gguf",
+        "filename": "Orpheus-3b-Hindi-FT-Q8_0.gguf",
+        "tokenizer_repo": "lex-au/Orpheus-3b-Hindi-FT-Q8_0.gguf",
+        "voices": ["ऋतिका"]
     }
 }
 
@@ -297,18 +315,23 @@ with gr.Blocks(title="Orpheus TTS – Multi-Model") as demo:
         This UI supports multiple Orpheus TTS models with GGUF format for efficient inference.
 
         **Available Models:**
-        - **English** (FP16 GGUF, ~1.5GB): Original Orpheus with voices: tara, leah, jess, leo, dan, mia, zac, zoe
+        - **English** (Q8_0 GGUF, ~3GB): Original Orpheus with voices: tara, leah, jess, leo, dan, mia, zac, zoe
         - **German** (Q8_0 GGUF, ~3GB): German fine-tuned model with voices: Jana (female, clear), Thomas (male, authoritative), Max (male, energetic)
         - **Italian/Spanish** (Q8_0 GGUF, ~3GB): Multi-language model with voices:
           - **Spanish**: Javi (male, warm), Sergio (male, professional), Maria (female, friendly)  
           - **Italian**: Pietro (male, passionate), Giulia (female, expressive), Carlo (male, refined)
         - **French** (Q8_0 GGUF, ~3GB): French fine-tuned model with voices: Pierre (male, sophisticated), Amelie (female, elegant), Marie (female, spirited)
+        - **Korean** (Q8_0 GGUF, ~3GB): Korean fine-tuned model with voices: 유나 (female, melodic), 준서 (male, confident)
+        - **Chinese** (Q8_0 GGUF, ~3GB): Mandarin fine-tuned model with voices: 长乐 (female, gentle), 白芷 (female, clear)
+        - **Hindi** (Q8_0 GGUF, ~3GB): Hindi fine-tuned model with voice: ऋतिका (female, expressive)
 
-        **Model Format Details:**
-        - **FP16**: Higher quality, smaller file size, faster loading
-        - **Q8_0**: Good quality, larger file size, more memory usage but supports emotion tags
+        **All models use Q8_0 GGUF format:**
+        - Good quality with consistent performance across languages
+        - ~3GB file size each
+        - Emotion tag support for all models
+        - Higher memory usage but excellent expressiveness
 
-        **Emotion Tags for German, Italian/Spanish & French Models:**
+        **Emotion Tags for All Models:**
         Use these tags in your text: `<laugh>`, `<chuckle>`, `<sigh>`, `<cough>`, `<sniffle>`, `<groan>`, `<yawn>`, `<gasp>`
 
         On first run, models will be automatically downloaded when selected.
@@ -317,7 +340,7 @@ with gr.Blocks(title="Orpheus TTS – Multi-Model") as demo:
 
     with gr.Row():
         model_selection = gr.Dropdown(
-            choices=["english", "german", "italian_spanish", "french"], 
+            choices=["english", "german", "italian_spanish", "french", "korean", "chinese", "hindi"], 
             value="english", 
             label="Model/Language"
         )
@@ -325,7 +348,7 @@ with gr.Blocks(title="Orpheus TTS – Multi-Model") as demo:
     with gr.Row():
         text = gr.Textbox(
             label="Text", 
-            placeholder="Enter your text here… (For German/Italian/Spanish/French models, you can use emotion tags like <laugh>, <sigh>, etc.)", 
+            placeholder="Enter your text here… (All models support emotion tags like <laugh>, <sigh>, etc.)", 
             lines=4
         )
     

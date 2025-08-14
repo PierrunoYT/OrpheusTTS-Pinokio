@@ -5,13 +5,16 @@ A standalone Text-to-Speech application supporting both English and German Orphe
 ## Features
 
 - 🎙️ High-quality, natural-sounding speech synthesis
-- 🌍 **Multi-language support**: English, German, Italian, Spanish, and French models
+- 🌍 **Multi-language support**: English, German, Italian, Spanish, French, Korean, Chinese (Mandarin), and Hindi models
 - 👥 **Multiple voice options**: 
   - English: 8 voices (tara, leah, jess, leo, dan, mia, zac, zoe)
   - German: 3 specialized voices (Jana, Thomas, Max)
   - Italian/Spanish: 6 voices (Javi, Sergio, Maria, Pietro, Giulia, Carlo)
   - French: 3 voices (Pierre, Amelie, Marie)
-- 🎭 **Emotion tags support** for German, Italian/Spanish, and French models
+  - Korean: 2 voices (유나, 준서)
+  - Chinese: 2 voices (长乐, 白芷)
+  - Hindi: 1 voice (ऋतिका)
+- 🎭 **Emotion tags support** for all models (consistent Q8_0 format)
 - 🌐 Web-based Gradio interface
 - 🔧 Adjustable generation parameters (temperature, top-p, repetition penalty)
 - 💾 Automatic audio file saving
@@ -126,8 +129,8 @@ The application will start and display:
 ### Step 5: Use the Web Interface
 
 1. Open your browser and go to http://127.0.0.1:7860
-2. **Select Model/Language**: Choose between "english", "german", "italian_spanish", or "french"
-3. Enter text in the "Text" field (use emotion tags for German: `<laugh>`, `<sigh>`, etc.)
+2. **Select Model/Language**: Choose between "english", "german", "italian_spanish", "french", "korean", "chinese", or "hindi"
+3. Enter text in the "Text" field (all models support emotion tags: `<laugh>`, `<sigh>`, etc.)
 4. Select a voice from the dropdown (voices update based on selected model)
 5. Adjust generation parameters if needed
 6. Click **"Convert to Speech (Generate WAV)"**
@@ -137,16 +140,19 @@ The application will start and display:
 ## Model Information
 
 ### English Orpheus TTS Model (GGUF)
-- **Model ID:** `unsloth/orpheus-3b-0.1-ft-GGUF`
-- **File:** `orpheus-3b-0.1-ft-F16.gguf`
+- **Model ID:** `lex-au/Orpheus-3b-FT-Q8_0.gguf`
+- **File:** `Orpheus-3b-FT-Q8_0.gguf`
 - **Type:** Public Hugging Face GGUF model (no authentication required)
-- **Quantization:** FP16 (16-bit floating point)
-- **Size:** ~1.5GB (FP16 quantized)
+- **Quantization:** Q8_0 (8-bit quantized)
+- **Size:** ~3GB (Q8_0 quantized)
 - **License:** Apache 2.0
 - **Language:** English
 - **Voices:** 8 different voices available (tara, leah, jess, leo, dan, mia, zac, zoe)
-- **Tokenizer:** `unsloth/orpheus-3b-0.1-ft` (for text processing)
-- **Features:** High quality audio, faster loading, smaller file size
+- **Tokenizer:** `lex-au/Orpheus-3b-FT-Q8_0.gguf` (for text processing)
+- **Special Features:** Emotion tags support (`<laugh>`, `<chuckle>`, `<sigh>`, `<cough>`, `<sniffle>`, `<groan>`, `<yawn>`, `<gasp>`)
+- **Audio Sample Rate:** 24kHz
+- **Architecture:** Specialized token-to-audio sequence model (~3 billion parameters)
+- **Features:** Good quality with emotion support, consistent with other models
 
 ### German Orpheus TTS Model (GGUF)
 - **Model ID:** `lex-au/Orpheus-3b-German-FT-Q8_0.gguf`
@@ -204,6 +210,54 @@ The application will start and display:
 - **Architecture:** Specialized token-to-audio sequence model (~3 billion parameters)
 - **Features:** Good quality with emotion support, larger file size, higher memory usage
 
+### Korean Orpheus TTS Model (GGUF)
+- **Model ID:** `lex-au/Orpheus-3b-Korean-FT-Q8_0.gguf`
+- **File:** `Orpheus-3b-Korean-FT-Q8_0.gguf`
+- **Type:** Public Hugging Face GGUF model (no authentication required)
+- **Quantization:** Q8_0 (8-bit quantized)
+- **Size:** ~3GB (Q8_0 quantized)
+- **License:** Apache 2.0
+- **Language:** Korean
+- **Voices:** 2 specialized Korean voices:
+  - **유나**: Female, Korean, melodic
+  - **준서**: Male, Korean, confident
+- **Special Features:** Emotion tags support (`<laugh>`, `<chuckle>`, `<sigh>`, `<cough>`, `<sniffle>`, `<groan>`, `<yawn>`, `<gasp>`)
+- **Audio Sample Rate:** 24kHz
+- **Architecture:** Specialized token-to-audio sequence model (~3 billion parameters)
+- **Features:** Good quality with emotion support, larger file size, higher memory usage
+
+### Chinese (Mandarin) Orpheus TTS Model (GGUF)
+- **Model ID:** `lex-au/Orpheus-3b-Chinese-FT-Q8_0.gguf`
+- **File:** `Orpheus-3b-Chinese-FT-Q8_0.gguf`
+- **Type:** Public Hugging Face GGUF model (no authentication required)
+- **Quantization:** Q8_0 (8-bit quantized)
+- **Size:** ~3GB (Q8_0 quantized)
+- **License:** Apache 2.0
+- **Language:** Chinese (Mandarin)
+- **Voices:** 2 specialized Mandarin voices:
+  - **长乐**: Female, Mandarin, gentle
+  - **白芷**: Female, Mandarin, clear
+- **Special Features:** Emotion tags support (`<laugh>`, `<chuckle>`, `<sigh>`, `<cough>`, `<sniffle>`, `<groan>`, `<yawn>`, `<gasp>`)
+- **Audio Sample Rate:** 24kHz
+- **Architecture:** Specialized token-to-audio sequence model (~3 billion parameters)
+- **Features:** Good quality with emotion support, larger file size, higher memory usage
+
+### Hindi Orpheus TTS Model (GGUF)
+- **Model ID:** `lex-au/Orpheus-3b-Hindi-FT-Q8_0.gguf`
+- **File:** `Orpheus-3b-Hindi-FT-Q8_0.gguf`
+- **Type:** Public Hugging Face GGUF model (no authentication required)
+- **Quantization:** Q8_0 (8-bit quantized)
+- **Size:** ~3GB (Q8_0 quantized)
+- **License:** Apache 2.0
+- **Language:** Hindi
+- **Voice:** 1 specialized Hindi voice:
+  - **ऋतिका**: Female, Hindi, expressive
+- **Special Features:** Emotion tags support (`<laugh>`, `<chuckle>`, `<sigh>`, `<cough>`, `<sniffle>`, `<groan>`, `<yawn>`, `<gasp>`)
+- **Audio Sample Rate:** 24kHz
+- **Architecture:** Specialized token-to-audio sequence model (~3 billion parameters)
+- **Features:** Good quality with emotion support, larger file size, higher memory usage
+- **Note:** Currently supports English text input (translated to Hindi speech)
+
 ### SNAC Audio Codec
 - **Model ID:** `hubertsiuzdak/snac_24khz`
 - **Type:** Public Hugging Face model
@@ -242,7 +296,19 @@ The application will start and display:
 - **Amelie** - Female, French, elegant voice (recommended for refined presentations)
 - **Marie** - Female, French, spirited delivery (great for dynamic and lively content)
 
-### Emotion Tags (German, Italian/Spanish & French)
+### Korean Voice Selection
+- **유나** - Female, Korean, melodic tone (perfect for expressive and musical content)
+- **준서** - Male, Korean, confident voice (great for authoritative and professional content)
+
+### Chinese (Mandarin) Voice Selection
+- **长乐** - Female, Mandarin, gentle tone (perfect for soft and soothing content)
+- **白芷** - Female, Mandarin, clear voice (excellent for precise and articulated speech)
+
+### Hindi Voice Selection
+- **ऋतिका** - Female, Hindi, expressive voice (perfect for dynamic and emotive content)
+  - **Note**: Currently uses English text input, produces Hindi speech output
+
+### Emotion Tags (All Models)
 Add expressiveness to speech by including these tags in your text:
 - `<laugh>`, `<chuckle>` - For laughter sounds
 - `<sigh>` - For sighing sounds  
@@ -250,10 +316,14 @@ Add expressiveness to speech by including these tags in your text:
 - `<groan>`, `<yawn>`, `<gasp>` - For additional emotional expression
 
 **Examples:** 
+- **English:** `tara: Hello! <laugh> This is a test with emotions. <sigh> How interesting!`
 - **German:** `Jana: Hallo! <laugh> Das ist ein Test mit Emotionen. <sigh> Interessant, oder?`
 - **Spanish:** `Javi: ¡Hola! <chuckle> Este es un ejemplo con emociones. <gasp> ¡Increíble!`
 - **Italian:** `Pietro: Ciao! <laugh> Questo è un esempio molto interessante. <sigh> Fantastico!`
 - **French:** `Pierre: Bonjour! <chuckle> Voici un exemple avec des émotions. <gasp> Magnifique!`
+- **Korean:** `유나: 안녕하세요! <laugh> 감정이 담긴 예시입니다. <sigh> 정말 흥미롭네요!`
+- **Chinese:** `长乐: 你好！<chuckle> 这是一个带有情感的例子。<gasp> 太棒了！`
+- **Hindi:** `ऋतिका: Hello! <laugh> This is a test with emotions. <sigh> How interesting!` (English input → Hindi speech)
 
 ### Generation Parameters
 - **Temperature (0.1-1.5):** Controls randomness. Lower = more consistent, Higher = more varied
@@ -263,18 +333,14 @@ Add expressiveness to speech by including these tags in your text:
 
 ### Performance Notes
 - **First run:** Models will be downloaded automatically when selected:
-  - English model: ~1.5GB (FP16 GGUF - higher quality, faster loading)
-  - German model: ~3GB (Q8_0 GGUF - good quality with emotion tags)
-  - Italian/Spanish model: ~3GB (Q8_0 GGUF - good quality with emotion tags)
-  - French model: ~3GB (Q8_0 GGUF - good quality with emotion tags)
+  - All models: ~3GB each (Q8_0 GGUF format with consistent quality and emotion tag support)
 - **GPU recommended:** CUDA-enabled GPU will significantly speed up generation (especially for Q8_0 models)
 - **CPU fallback:** GGUF format provides better CPU performance than standard models
 - **Memory Requirements:**
-  - English model (FP16): ~4GB RAM minimum, 6GB recommended
-  - German/Italian/Spanish/French models (Q8_0): ~6GB RAM minimum, 8GB recommended
-- **Quantization Comparison:**
-  - **FP16**: Best quality, smaller size, faster loading, no emotion tags
-  - **Q8_0**: Good quality, larger size, emotion tag support, higher memory usage
+  - All models (Q8_0): ~6GB RAM minimum, 8GB recommended for optimal performance
+- **Model Benefits:**
+  - **Q8_0 Format**: Good quality, emotion tag support, consistent performance across all languages
+  - **Unified Experience**: Same features and performance across English, German, Italian, Spanish, French, Korean, Chinese, and Hindi
 
 ## File Structure
 
@@ -283,7 +349,7 @@ OrpheusTTS/
 ├── app.py                     # Main multi-model application
 ├── requirements.txt           # Python dependencies
 ├── venv/                      # Python virtual environment
-├── outputs/                   # Generated audio files (English/German/Italian/Spanish/French)
+├── outputs/                   # Generated audio files (English/German/Italian/Spanish/French/Korean/Chinese/Hindi)
 ├── models/                    # Downloaded model cache
 ├── README.md                  # This file
 └── dione.json                 # Configuration file
@@ -365,10 +431,13 @@ This project uses models with their respective licenses:
 
 ## Credits
 
-- **English Orpheus TTS GGUF:** Unsloth (https://huggingface.co/unsloth/orpheus-3b-0.1-ft-GGUF)
+- **English Orpheus TTS GGUF:** lex-au (https://huggingface.co/lex-au/Orpheus-3b-FT-Q8_0.gguf)
 - **German Orpheus TTS GGUF:** lex-au (https://huggingface.co/lex-au/Orpheus-3b-German-FT-Q8_0.gguf)
 - **Italian/Spanish Orpheus TTS GGUF:** lex-au (https://huggingface.co/lex-au/Orpheus-3b-Italian_Spanish-FT-Q8_0.gguf)
 - **French Orpheus TTS GGUF:** lex-au (https://huggingface.co/lex-au/Orpheus-3b-French-FT-Q8_0.gguf)
+- **Korean Orpheus TTS GGUF:** lex-au (https://huggingface.co/lex-au/Orpheus-3b-Korean-FT-Q8_0.gguf)
+- **Chinese Orpheus TTS GGUF:** lex-au (https://huggingface.co/lex-au/Orpheus-3b-Chinese-FT-Q8_0.gguf)
+- **Hindi Orpheus TTS GGUF:** lex-au (https://huggingface.co/lex-au/Orpheus-3b-Hindi-FT-Q8_0.gguf)
 - **Original Orpheus TTS:** Created by Canopy Labs, quantized versions available
 - **SNAC Codec:** Hubert Siuzdak (https://huggingface.co/hubertsiuzdak/snac_24khz)
 - **Implementation:** Based on ComfyUI-Orpheus-TTS by ShmuelRonen
