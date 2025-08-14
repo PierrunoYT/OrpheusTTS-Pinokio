@@ -21,56 +21,86 @@ except ImportError as e:
     IMPORTS_SUCCESSFUL = False
 
 # === Konfiguration ===
-# Orpheus model configuration
-ORPHEUS_REPO_ID = os.environ.get("ORPHEUS_REPO", "unsloth/orpheus-3b-0.1-ft-GGUF")
-ORPHEUS_FILENAME = os.environ.get("ORPHEUS_FILENAME", "orpheus-3b-0.1-ft-F16.gguf")
-TOKENIZER_REPO_ID = os.environ.get("TOKENIZER_REPO", "unsloth/orpheus-3b-0.1-ft")  # For tokenizer
+# Model configurations
+MODELS = {
+    "english": {
+        "repo_id": os.environ.get("ORPHEUS_REPO", "unsloth/orpheus-3b-0.1-ft-GGUF"),
+        "filename": os.environ.get("ORPHEUS_FILENAME", "orpheus-3b-0.1-ft-F16.gguf"),
+        "tokenizer_repo": os.environ.get("TOKENIZER_REPO", "unsloth/orpheus-3b-0.1-ft"),
+        "voices": ["tara", "leah", "jess", "leo", "dan", "mia", "zac", "zoe"]
+    },
+    "german": {
+        "repo_id": "lex-au/Orpheus-3b-German-FT-Q8_0.gguf",
+        "filename": "Orpheus-3b-German-FT-Q8_0.gguf",
+        "tokenizer_repo": "lex-au/Orpheus-3b-German-FT-Q8_0.gguf",
+        "voices": ["Jana", "Thomas", "Max"]
+    },
+    "italian_spanish": {
+        "repo_id": "lex-au/Orpheus-3b-Italian_Spanish-FT-Q8_0.gguf",
+        "filename": "Orpheus-3b-Italian_Spanish-FT-Q8_0.gguf",
+        "tokenizer_repo": "lex-au/Orpheus-3b-Italian_Spanish-FT-Q8_0.gguf",
+        "voices": ["Javi", "Sergio", "Maria", "Pietro", "Giulia", "Carlo"]
+    },
+    "french": {
+        "repo_id": "lex-au/Orpheus-3b-French-FT-Q8_0.gguf",
+        "filename": "Orpheus-3b-French-FT-Q8_0.gguf",
+        "tokenizer_repo": "lex-au/Orpheus-3b-French-FT-Q8_0.gguf",
+        "voices": ["Pierre", "Amelie", "Marie"]
+    }
+}
+
 SNAC_MODEL_PATH = os.environ.get("SNAC_MODEL", "hubertsiuzdak/snac_24khz")
 
 # Ausgabeverzeichnis für WAVs
 OUTPUT_DIR = Path("outputs").resolve()
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
-# Verfügbare Stimmen
-VOICES = [
-    "tara", "leah", "jess", "leo", "dan", "mia", "zac", "zoe"
-]
+# Current model selection
+CURRENT_MODEL = "english"
 
 # Global model storage
 LOADED_MODELS = {
     "snac_model": None,
     "orpheus_model": None,
     "tokenizer": None,
-    "device": None
+    "device": None,
+    "current_model_type": None
 }
 
-def load_models():
+def load_models(model_type="english"):
     """Load Orpheus TTS and SNAC models"""
     if not IMPORTS_SUCCESSFUL:
         raise ImportError("Required libraries are not installed. Please install the required dependencies.")
 
     global LOADED_MODELS
 
-    if LOADED_MODELS["orpheus_model"] is not None:
-        return  # Models already loaded
+    # Check if we need to reload models
+    if (LOADED_MODELS["orpheus_model"] is not None and 
+        LOADED_MODELS["current_model_type"] == model_type):
+        return  # Same models already loaded
 
-    print("Loading Orpheus TTS models...")
+    print(f"Loading Orpheus TTS models for {model_type}...")
 
     # Check if CUDA is available
     device = "cuda" if torch.cuda.is_available() else "cpu"
     print(f"Using device: {device}")
 
     try:
-        # Load SNAC model
-        print("Loading SNAC model...")
-        snac_model = SNAC.from_pretrained(SNAC_MODEL_PATH).eval()
-        snac_model = snac_model.to(device)
+        # Load SNAC model if not already loaded
+        if LOADED_MODELS["snac_model"] is None:
+            print("Loading SNAC model...")
+            snac_model = SNAC.from_pretrained(SNAC_MODEL_PATH).eval()
+            snac_model = snac_model.to(device)
+            LOADED_MODELS["snac_model"] = snac_model
 
+        # Get model configuration
+        model_config = MODELS[model_type]
+        
         # Download GGUF model file
-        print(f"Downloading GGUF model from {ORPHEUS_REPO_ID}/{ORPHEUS_FILENAME}...")
+        print(f"Downloading GGUF model from {model_config['repo_id']}/{model_config['filename']}...")
         model_path = hf_hub_download(
-            repo_id=ORPHEUS_REPO_ID,
-            filename=ORPHEUS_FILENAME,
+            repo_id=model_config["repo_id"],
+            filename=model_config["filename"],
             cache_dir="./models"
         )
         print(f"Model downloaded to: {model_path}")
@@ -78,24 +108,34 @@ def load_models():
         # Load GGUF model with llama-cpp-python
         print("Loading Orpheus GGUF model...")
         n_gpu_layers = -1 if device == "cuda" else 0  # Use all GPU layers if CUDA available
+        
+        if device == "cuda":
+            print(f"Using GPU with {n_gpu_layers} layers")
+        else:
+            print("Using CPU")
+            
         orpheus_model = Llama(
             model_path=model_path,
             n_gpu_layers=n_gpu_layers,
-            verbose=False,
+            verbose=True,  # Enable verbose to see GPU info
             n_ctx=4096,  # Context window
             n_threads=4,  # CPU threads
         )
 
         # Load tokenizer from the original repo (non-GGUF)
         print("Loading tokenizer...")
-        tokenizer = AutoTokenizer.from_pretrained(TOKENIZER_REPO_ID)
+        try:
+            tokenizer = AutoTokenizer.from_pretrained(model_config["tokenizer_repo"])
+        except:
+            # Fallback to English tokenizer for German model
+            tokenizer = AutoTokenizer.from_pretrained(MODELS["english"]["tokenizer_repo"])
 
-        LOADED_MODELS = {
-            "snac_model": snac_model,
+        LOADED_MODELS.update({
             "orpheus_model": orpheus_model,
             "tokenizer": tokenizer,
-            "device": device
-        }
+            "device": device,
+            "current_model_type": model_type
+        })
 
         print("Models loaded successfully!")
 
@@ -188,14 +228,14 @@ def redistribute_codes(code_list, snac_model):
         print(f"Error in redistribute_codes: {e}")
         return np.zeros(24000, dtype=np.float32)
 
-def synthesize(text: str, voice: str, temperature: float, top_p: float, repetition_penalty: float, max_new_tokens: int):
+def synthesize(text: str, voice: str, model_type: str, temperature: float, top_p: float, repetition_penalty: float, max_new_tokens: int):
     """Generate speech from text using Orpheus TTS"""
     if not text or not text.strip():
         return None, "Please enter text."
 
     try:
         # Load models if not already loaded
-        load_models()
+        load_models(model_type)
         
         snac_model = LOADED_MODELS["snac_model"]
         orpheus_model = LOADED_MODELS["orpheus_model"]
@@ -232,7 +272,7 @@ def synthesize(text: str, voice: str, temperature: float, top_p: float, repetiti
         # Save to file
         ts = datetime.now().strftime("%Y%m%d-%H%M%S")
         safe_voice = "".join(c for c in voice if c.isalnum() or c in ("-","_"))
-        out_wav = OUTPUT_DIR / f"orpheus_{safe_voice}_{ts}.wav"
+        out_wav = OUTPUT_DIR / f"orpheus_{model_type}_{safe_voice}_{ts}.wav"
         
         # Save audio file
         sf.write(str(out_wav), audio_samples, 24000)
@@ -245,26 +285,53 @@ def synthesize(text: str, voice: str, temperature: float, top_p: float, repetiti
         traceback.print_exc()
         return None, f"Error during synthesis: {e}"
 
+# Helper function to update voices based on model selection
+def update_voices(model_type):
+    return gr.Dropdown(choices=MODELS[model_type]["voices"], value=MODELS[model_type]["voices"][0])
+
 # Gradio Interface
-with gr.Blocks(title="Orpheus TTS – Standalone") as demo:
+with gr.Blocks(title="Orpheus TTS – Multi-Model") as demo:
     gr.Markdown(
         """
-        # Orpheus TTS – Standalone (GGUF)
-        This UI uses Orpheus TTS with GGUF model format for efficient inference.
+        # Orpheus TTS – Multi-Model (GGUF)
+        This UI supports multiple Orpheus TTS models with GGUF format for efficient inference.
 
-        **Models that will be downloaded:**
-        - Orpheus TTS Model: unsloth/orpheus-3b-0.1-ft-GGUF (F16 GGUF format)
-        - SNAC Audio Codec: hubertsiuzdak/snac_24khz (public)
-        - Tokenizer: unsloth/orpheus-3b-0.1-ft (for text processing)
+        **Available Models:**
+        - **English** (FP16 GGUF, ~1.5GB): Original Orpheus with voices: tara, leah, jess, leo, dan, mia, zac, zoe
+        - **German** (Q8_0 GGUF, ~3GB): German fine-tuned model with voices: Jana (female, clear), Thomas (male, authoritative), Max (male, energetic)
+        - **Italian/Spanish** (Q8_0 GGUF, ~3GB): Multi-language model with voices:
+          - **Spanish**: Javi (male, warm), Sergio (male, professional), Maria (female, friendly)  
+          - **Italian**: Pietro (male, passionate), Giulia (female, expressive), Carlo (male, refined)
+        - **French** (Q8_0 GGUF, ~3GB): French fine-tuned model with voices: Pierre (male, sophisticated), Amelie (female, elegant), Marie (female, spirited)
 
-        On first run, models will be automatically downloaded (~1.5-2GB for GGUF).
+        **Model Format Details:**
+        - **FP16**: Higher quality, smaller file size, faster loading
+        - **Q8_0**: Good quality, larger file size, more memory usage but supports emotion tags
+
+        **Emotion Tags for German, Italian/Spanish & French Models:**
+        Use these tags in your text: `<laugh>`, `<chuckle>`, `<sigh>`, `<cough>`, `<sniffle>`, `<groan>`, `<yawn>`, `<gasp>`
+
+        On first run, models will be automatically downloaded when selected.
         """
     )
 
     with gr.Row():
-        text = gr.Textbox(label="Text", placeholder="Enter your text here…", lines=4)
+        model_selection = gr.Dropdown(
+            choices=["english", "german", "italian_spanish", "french"], 
+            value="english", 
+            label="Model/Language"
+        )
+    
     with gr.Row():
-        voice = gr.Dropdown(VOICES, value="tara", label="Voice")
+        text = gr.Textbox(
+            label="Text", 
+            placeholder="Enter your text here… (For German/Italian/Spanish/French models, you can use emotion tags like <laugh>, <sigh>, etc.)", 
+            lines=4
+        )
+    
+    with gr.Row():
+        voice = gr.Dropdown(MODELS["english"]["voices"], value="tara", label="Voice")
+    
     with gr.Row():
         temperature = gr.Slider(minimum=0.1, maximum=1.5, value=0.6, step=0.05, label="Temperature")
         top_p = gr.Slider(minimum=0.1, maximum=1.0, value=0.95, step=0.05, label="Top-p")
@@ -275,13 +342,25 @@ with gr.Blocks(title="Orpheus TTS – Standalone") as demo:
     out_audio = gr.Audio(label="Result (WAV)", type="filepath")
     out_status = gr.Markdown()
 
-    def _on_click(text, voice, temperature, top_p, repetition_penalty, max_new_tokens):
-        wav_path, status = synthesize(text, voice, temperature, top_p, repetition_penalty, int(max_new_tokens))
+    # Update voices when model changes
+    model_selection.change(
+        fn=update_voices,
+        inputs=[model_selection],
+        outputs=[voice]
+    )
+
+    def _on_click(text, voice, model_type, temperature, top_p, repetition_penalty, max_new_tokens):
+        # Validate voice is in correct model's voice list
+        if voice not in MODELS[model_type]["voices"]:
+            # Use first voice of selected model if current voice is invalid
+            voice = MODELS[model_type]["voices"][0]
+            
+        wav_path, status = synthesize(text, voice, model_type, temperature, top_p, repetition_penalty, int(max_new_tokens))
         return wav_path, status
 
     run_btn.click(
         fn=_on_click,
-        inputs=[text, voice, temperature, top_p, repetition_penalty, max_new_tokens],
+        inputs=[text, voice, model_selection, temperature, top_p, repetition_penalty, max_new_tokens],
         outputs=[out_audio, out_status],
     )
 
