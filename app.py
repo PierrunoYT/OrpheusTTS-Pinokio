@@ -7,6 +7,8 @@ import sys
 from pathlib import Path
 from datetime import datetime
 import re
+import gc
+import uuid
 
 # Import required libraries for direct GGUF inference
 try:
@@ -75,6 +77,7 @@ OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 # Current model selection
 CURRENT_MODEL = "english"
+ORPHEUS_N_CTX = 4096
 
 # Global model storage
 LOADED_MODELS = {
@@ -96,6 +99,21 @@ def load_models(model_type="english"):
     if (LOADED_MODELS["orpheus_model"] is not None and 
         LOADED_MODELS["current_model_type"] == model_type):
         return  # Same models already loaded
+    if LOADED_MODELS["orpheus_model"] is not None:
+        prev_model = LOADED_MODELS["orpheus_model"]
+        try:
+            if hasattr(prev_model, "close"):
+                prev_model.close()
+        except Exception as e:
+            print(f"Warning: failed to close previous Orpheus model: {e}")
+        finally:
+            del prev_model
+            LOADED_MODELS["orpheus_model"] = None
+            LOADED_MODELS["tokenizer"] = None
+            LOADED_MODELS["current_model_type"] = None
+            gc.collect()
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
 
     print(f"Loading Orpheus TTS models for {model_type}...")
 
@@ -136,7 +154,7 @@ def load_models(model_type="english"):
             model_path=model_path,
             n_gpu_layers=n_gpu_layers,
             verbose=True,  # Enable verbose to see GPU info
-            n_ctx=4096,  # Context window
+            n_ctx=ORPHEUS_N_CTX,  # Context window
             n_threads=4,  # CPU threads
         )
 
@@ -144,9 +162,13 @@ def load_models(model_type="english"):
         print("Loading tokenizer...")
         try:
             tokenizer = AutoTokenizer.from_pretrained(model_config["tokenizer_repo"])
-        except:
-            # Fallback to English tokenizer for German model
+        except (OSError, ValueError, TypeError):
+            # Fallback to English tokenizer for specific locale/tokenizer mismatches
             tokenizer = AutoTokenizer.from_pretrained(MODELS["english"]["tokenizer_repo"])
+        except Exception:
+            # Re-raise unexpected loader failures for visibility
+            print(f"Failed to load tokenizer from {model_config['tokenizer_repo']}")
+            raise
 
         LOADED_MODELS.update({
             "orpheus_model": orpheus_model,
@@ -269,9 +291,15 @@ def synthesize(text: str, voice: str, model_type: str, temperature: float, top_p
         full_prompt = start_token + prompt + end_tokens
 
         # Generate tokens using llama-cpp-python
+        full_prompt_token_count = len(tokenizer.encode(full_prompt))
+        max_token_budget = ORPHEUS_N_CTX - full_prompt_token_count - 32
+        if max_token_budget < 1:
+            return None, "Prompt is too long for the model context."
+        safe_max_tokens = min(max_new_tokens, max_token_budget)
+
         output = orpheus_model(
             full_prompt,
-            max_tokens=max_new_tokens,
+            max_tokens=safe_max_tokens,
             temperature=temperature,
             top_p=top_p,
             repeat_penalty=repetition_penalty,
@@ -290,7 +318,8 @@ def synthesize(text: str, voice: str, model_type: str, temperature: float, top_p
         # Save to file
         ts = datetime.now().strftime("%Y%m%d-%H%M%S")
         safe_voice = "".join(c for c in voice if c.isalnum() or c in ("-","_"))
-        out_wav = OUTPUT_DIR / f"orpheus_{model_type}_{safe_voice}_{ts}.wav"
+        unique_id = uuid.uuid4().hex[:8]
+        out_wav = OUTPUT_DIR / f"orpheus_{model_type}_{safe_voice}_{ts}_{unique_id}.wav"
         
         # Save audio file
         sf.write(str(out_wav), audio_samples, 24000)
@@ -359,7 +388,7 @@ with gr.Blocks(title="Orpheus TTS – Multi-Model") as demo:
         temperature = gr.Slider(minimum=0.1, maximum=1.5, value=0.6, step=0.05, label="Temperature")
         top_p = gr.Slider(minimum=0.1, maximum=1.0, value=0.95, step=0.05, label="Top-p")
         repetition_penalty = gr.Slider(minimum=1.0, maximum=2.0, value=1.1, step=0.05, label="Repetition Penalty")
-        max_new_tokens = gr.Slider(minimum=100, maximum=4000, value=2700, step=100, label="Max New Tokens")
+        max_new_tokens = gr.Slider(minimum=100, maximum=3500, value=2000, step=100, label="Max New Tokens")
 
     run_btn = gr.Button("Convert to Speech (Generate WAV)")
     out_audio = gr.Audio(label="Result (WAV)", type="filepath")
