@@ -24,47 +24,42 @@ except ImportError as e:
 
 # === Konfiguration ===
 # Model configurations
+FALLBACK_TOKENIZER_REPO = "unsloth/orpheus-3b-0.1-ft"
+
 MODELS = {
     "english": {
         "repo_id": os.environ.get("ORPHEUS_REPO", "lex-au/Orpheus-3b-FT-Q8_0.gguf"),
         "filename": os.environ.get("ORPHEUS_FILENAME", "Orpheus-3b-FT-Q8_0.gguf"),
-        "tokenizer_repo": os.environ.get("TOKENIZER_REPO", "lex-au/Orpheus-3b-FT-Q8_0.gguf"),
         "voices": ["tara", "leah", "jess", "leo", "dan", "mia", "zac", "zoe"]
     },
     "german": {
         "repo_id": "lex-au/Orpheus-3b-German-FT-Q8_0.gguf",
         "filename": "Orpheus-3b-German-FT-Q8_0.gguf",
-        "tokenizer_repo": "lex-au/Orpheus-3b-German-FT-Q8_0.gguf",
         "voices": ["Jana", "Thomas", "Max"]
     },
     "italian_spanish": {
         "repo_id": "lex-au/Orpheus-3b-Italian_Spanish-FT-Q8_0.gguf",
         "filename": "Orpheus-3b-Italian_Spanish-FT-Q8_0.gguf",
-        "tokenizer_repo": "lex-au/Orpheus-3b-Italian_Spanish-FT-Q8_0.gguf",
         "voices": ["Javi", "Sergio", "Maria", "Pietro", "Giulia", "Carlo"]
     },
     "french": {
         "repo_id": "lex-au/Orpheus-3b-French-FT-Q8_0.gguf",
         "filename": "Orpheus-3b-French-FT-Q8_0.gguf",
-        "tokenizer_repo": "lex-au/Orpheus-3b-French-FT-Q8_0.gguf",
         "voices": ["Pierre", "Amelie", "Marie"]
     },
     "korean": {
         "repo_id": "lex-au/Orpheus-3b-Korean-FT-Q8_0.gguf",
         "filename": "Orpheus-3b-Korean-FT-Q8_0.gguf",
-        "tokenizer_repo": "lex-au/Orpheus-3b-Korean-FT-Q8_0.gguf",
         "voices": ["유나", "준서"]
     },
     "chinese": {
         "repo_id": "lex-au/Orpheus-3b-Chinese-FT-Q8_0.gguf",
         "filename": "Orpheus-3b-Chinese-FT-Q8_0.gguf",
-        "tokenizer_repo": "lex-au/Orpheus-3b-Chinese-FT-Q8_0.gguf",
         "voices": ["长乐", "白芷"]
     },
     "hindi": {
         "repo_id": "lex-au/Orpheus-3b-Hindi-FT-Q8_0.gguf",
         "filename": "Orpheus-3b-Hindi-FT-Q8_0.gguf",
-        "tokenizer_repo": "lex-au/Orpheus-3b-Hindi-FT-Q8_0.gguf",
         "voices": ["ऋतिका"]
     }
 }
@@ -158,17 +153,9 @@ def load_models(model_type="english"):
             n_threads=4,  # CPU threads
         )
 
-        # Load tokenizer from the original repo (non-GGUF)
+        # Load tokenizer from the base Orpheus repo (GGUF repos do not contain tokenizer files)
         print("Loading tokenizer...")
-        try:
-            tokenizer = AutoTokenizer.from_pretrained(model_config["tokenizer_repo"])
-        except (OSError, ValueError, TypeError):
-            # Fallback to English tokenizer for specific locale/tokenizer mismatches
-            tokenizer = AutoTokenizer.from_pretrained(MODELS["english"]["tokenizer_repo"])
-        except Exception:
-            # Re-raise unexpected loader failures for visibility
-            print(f"Failed to load tokenizer from {model_config['tokenizer_repo']}")
-            raise
+        tokenizer = AutoTokenizer.from_pretrained(FALLBACK_TOKENIZER_REPO)
 
         LOADED_MODELS.update({
             "orpheus_model": orpheus_model,
