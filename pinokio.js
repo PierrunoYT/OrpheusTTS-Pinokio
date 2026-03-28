@@ -3,7 +3,7 @@ module.exports = {
   version: "1.0.0",
   title: "OrpheusTTS",
   description: "Standalone Text-to-Speech application using Orpheus TTS with Gradio interface",
-  icon: "icon.png",
+  icon: "icon.jpg",
   menu: async (kernel, info) => {
     let installed = info.exists("env")
     let running = {
