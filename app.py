@@ -373,8 +373,8 @@ with gr.Blocks(title="Orpheus TTS – Multi-Model") as demo:
     
     with gr.Row():
         temperature = gr.Slider(minimum=0.1, maximum=1.5, value=0.6, step=0.05, label="Temperature")
-        top_p = gr.Slider(minimum=0.1, maximum=1.0, value=0.95, step=0.05, label="Top-p")
-        repetition_penalty = gr.Slider(minimum=1.0, maximum=2.0, value=1.1, step=0.05, label="Repetition Penalty")
+        top_p = gr.Slider(minimum=0.1, maximum=1.0, value=0.8, step=0.05, label="Top-p")
+        repetition_penalty = gr.Slider(minimum=1.0, maximum=2.0, value=1.3, step=0.05, label="Repetition Penalty")
         max_new_tokens = gr.Slider(minimum=100, maximum=3500, value=2000, step=100, label="Max New Tokens")
 
     run_btn = gr.Button("Convert to Speech (Generate WAV)")
