@@ -1,6 +1,6 @@
 const path = require('path')
 module.exports = {
-  version: "1.0.0",
+  version: "5.0",
   title: "OrpheusTTS",
   description: "Standalone Text-to-Speech application using Orpheus TTS with Gradio interface",
   icon: "icon.jpg",
