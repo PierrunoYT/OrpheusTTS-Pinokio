@@ -1,0 +1,6 @@
+{
+  "version": "5.0",
+  "title": "OrpheusTTS",
+  "description": "Standalone Text-to-Speech using Orpheus TTS with a Gradio UI",
+  "icon": "icon.jpg"
+}

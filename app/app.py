@@ -404,4 +404,8 @@ with gr.Blocks(title="Orpheus TTS – Multi-Model") as demo:
     )
 
 if __name__ == "__main__":
-    demo.launch(server_name="127.0.0.1", server_port=7860, share=False)
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--port", type=int, default=7860, help="Gradio server port (Pinokio sets via {{port}})")
+    args = parser.parse_args()
+    demo.launch(server_name="127.0.0.1", server_port=args.port, share=False)

@@ -5,40 +5,43 @@ module.exports = {
       params: {
         build: true,
         venv: "env",
+        path: "app",
         message: [
           "uv pip install wheel",
           "uv pip install -r requirements.txt",
         ],
       }
     },
-    // Install torch for the correct platform/GPU first
     {
       method: "script.start",
       params: {
         uri: "torch.js",
         params: {
           venv: "env",
+          path: "app",
         }
       }
     },
-    // Install llama-cpp-python with CUDA support on NVIDIA, plain otherwise
     {
-      "when": "{{gpu === 'nvidia'}}",
+      when: "{{gpu === 'nvidia'}}",
       method: "shell.run",
       params: {
         venv: "env",
+        path: "app",
         env: {
           CMAKE_ARGS: "-DGGML_CUDA=on",
           FORCE_CMAKE: "1"
         },
         message: "uv pip install llama-cpp-python --no-cache-dir",
       },
-      "next": null
+      next: null
     },
     {
+      when: "{{gpu !== 'nvidia'}}",
       method: "shell.run",
       params: {
         venv: "env",
+        path: "app",
         message: "uv pip install llama-cpp-python --no-cache-dir",
       }
     },
