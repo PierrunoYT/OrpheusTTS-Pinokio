@@ -3,7 +3,6 @@ module.exports = {
     {
       method: "shell.run",
       params: {
-        build: true,
         venv: "env",
         path: "app",
         message: [
