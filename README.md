@@ -5,14 +5,14 @@ Standalone Text-to-Speech using Orpheus TTS (GGUF via llama-cpp-python), SNAC de
 ## What it does
 
 - Downloads and runs Orpheus multi-language GGUF models with a local Gradio interface.
-- Uses a Pinokio-managed Python virtual environment (`env/`) at the project root.
+- Uses a Pinokio-managed Python virtual environment (`app/env/`).
 
 ## Using in Pinokio
 
 1. **Install** — installs dependencies (including PyTorch via `torch.js` and `llama-cpp-python`, with CUDA build when an NVIDIA GPU is detected).
 2. **Start** — launches `app/app.py` on the next free port (`{{port}}`) and opens the local URL when Gradio prints it.
 3. **Update** — `git pull` and refreshes Python packages from `app/requirements.txt`.
-4. **Reset** — removes the `env/` folder so you can reinstall cleanly.
+4. **Reset** — removes the `app/env/` and `app/models/` folders so you can reinstall cleanly.
 
 ## Programmatic access
 

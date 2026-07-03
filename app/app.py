@@ -3,18 +3,16 @@ import torch
 import numpy as np
 import soundfile as sf
 import os
-import sys
 from pathlib import Path
 from datetime import datetime
-import re
 import gc
 import uuid
 
 # Import required libraries for direct GGUF inference
 try:
     from snac import SNAC
-    from transformers import AutoModelForCausalLM, AutoTokenizer
-    from huggingface_hub import snapshot_download, login, hf_hub_download
+    from transformers import AutoTokenizer
+    from huggingface_hub import hf_hub_download
     from llama_cpp import Llama
     IMPORTS_SUCCESSFUL = True
 except ImportError as e:
@@ -169,19 +167,6 @@ def load_models(model_type="english"):
     except Exception as e:
         print(f"Error loading models: {e}")
         raise e
-
-def process_prompt(prompt, voice, tokenizer, device):
-    """Process text prompt for the model"""
-    prompt = f"{voice}: {prompt}"
-    input_ids = tokenizer(prompt, return_tensors="pt").input_ids
-    
-    start_token = torch.tensor([[128259]], dtype=torch.int64)  # Start of human
-    end_tokens = torch.tensor([[128009, 128260]], dtype=torch.int64)  # End of text, End of human
-    
-    modified_input_ids = torch.cat([start_token, input_ids, end_tokens], dim=1)
-    attention_mask = torch.ones_like(modified_input_ids)
-    
-    return modified_input_ids.to(device), attention_mask.to(device)
 
 def parse_output(generated_ids):
     """Parse output tokens to audio codes"""
