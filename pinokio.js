@@ -1,13 +1,19 @@
 module.exports = {
   version: "7.0",
   menu: async (kernel, info) => {
-    let installed = info.exists("app/env")
+    let installed = info.exists("app/env/.installed")
     let running = {
       install: info.running("install.js"),
       start: info.running("start.js"),
       update: info.running("update.js"),
       reset: info.running("reset.js"),
       link: info.running("link.js")
+    }
+    // Keep maintenance visible even after Reset removes the environment.
+    for (const [name, text] of [["update", "Updating"], ["reset", "Resetting"], ["link", "Deduplicating"]]) {
+      if (running[name]) {
+        return [{ default: true, icon: "fa-solid fa-terminal", text, href: `${name}.js` }]
+      }
     }
     if (running.install) {
       return [{
@@ -38,27 +44,6 @@ module.exports = {
             href: "start.js",
           }]
         }
-      } else if (running.update) {
-        return [{
-          default: true,
-          icon: 'fa-solid fa-terminal',
-          text: "Updating",
-          href: "update.js",
-        }]
-      } else if (running.reset) {
-        return [{
-          default: true,
-          icon: 'fa-solid fa-terminal',
-          text: "Resetting",
-          href: "reset.js",
-        }]
-      } else if (running.link) {
-        return [{
-          default: true,
-          icon: 'fa-solid fa-terminal',
-          text: "Deduplicating",
-          href: "link.js",
-        }]
       } else {
         return [{
           default: true,
