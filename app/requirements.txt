@@ -7,7 +7,7 @@ snac>=1.0.0
 huggingface_hub>=0.16.0
 
 # Web Interface
-gradio>=4.0.0
+gradio>=5.0.0
 
 # Standard Library Dependencies (included for completeness)
 # pathlib - built into Python 3.4+
