@@ -7,23 +7,25 @@ from pathlib import Path
 from datetime import datetime
 import gc
 import uuid
+from functools import wraps
+from itertools import islice
+from threading import RLock
+
+from audio_codes import AUDIO_END, END_OF_TURN, build_prompt, parse_output, split_codes
 
 # Import required libraries for direct GGUF inference
 try:
     from snac import SNAC
-    from transformers import AutoTokenizer
     from huggingface_hub import hf_hub_download
     from llama_cpp import Llama
     IMPORTS_SUCCESSFUL = True
 except ImportError as e:
     print(f"Error importing required libraries: {e}")
-    print("Please install: pip install snac transformers huggingface_hub soundfile llama-cpp-python")
+    print("Please run Install in Pinokio to install the required dependencies.")
     IMPORTS_SUCCESSFUL = False
 
 # === Konfiguration ===
 # Model configurations
-FALLBACK_TOKENIZER_REPO = "unsloth/orpheus-3b-0.1-ft"
-
 MODELS = {
     "english": {
         "repo_id": os.environ.get("ORPHEUS_REPO", "lex-au/Orpheus-3b-FT-Q8_0.gguf"),
@@ -65,28 +67,39 @@ MODELS = {
 SNAC_MODEL_PATH = os.environ.get("SNAC_MODEL", "hubertsiuzdak/snac_24khz")
 
 # Ausgabeverzeichnis für WAVs
-OUTPUT_DIR = Path("outputs").resolve()
+APP_DIR = Path(__file__).resolve().parent
+OUTPUT_DIR = APP_DIR / "outputs"
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 # Current model selection
-CURRENT_MODEL = "english"
 ORPHEUS_N_CTX = 4096
+MODEL_LOCK = RLock()
+
+
+def serialized_models(fn):
+    """Protect native model state across loading and inference, including API calls."""
+    @wraps(fn)
+    def wrapped(*args, **kwargs):
+        with MODEL_LOCK:
+            return fn(*args, **kwargs)
+    return wrapped
 
 # Global model storage
 LOADED_MODELS = {
     "snac_model": None,
     "orpheus_model": None,
-    "tokenizer": None,
     "device": None,
     "current_model_type": None
 }
 
+@serialized_models
 def load_models(model_type="english"):
     """Load Orpheus TTS and SNAC models"""
     if not IMPORTS_SUCCESSFUL:
         raise ImportError("Required libraries are not installed. Please install the required dependencies.")
 
-    global LOADED_MODELS
+    if model_type not in MODELS:
+        raise ValueError(f"Unknown model: {model_type}")
 
     # Check if we need to reload models
     if (LOADED_MODELS["orpheus_model"] is not None and 
@@ -102,7 +115,6 @@ def load_models(model_type="english"):
         finally:
             del prev_model
             LOADED_MODELS["orpheus_model"] = None
-            LOADED_MODELS["tokenizer"] = None
             LOADED_MODELS["current_model_type"] = None
             gc.collect()
             if torch.cuda.is_available():
@@ -130,7 +142,7 @@ def load_models(model_type="english"):
         model_path = hf_hub_download(
             repo_id=model_config["repo_id"],
             filename=model_config["filename"],
-            cache_dir="./models"
+            cache_dir=str(APP_DIR / "models")
         )
         print(f"Model downloaded to: {model_path}")
 
@@ -151,13 +163,8 @@ def load_models(model_type="english"):
             n_threads=4,  # CPU threads
         )
 
-        # Load tokenizer from the base Orpheus repo (GGUF repos do not contain tokenizer files)
-        print("Loading tokenizer...")
-        tokenizer = AutoTokenizer.from_pretrained(FALLBACK_TOKENIZER_REPO)
-
         LOADED_MODELS.update({
             "orpheus_model": orpheus_model,
-            "tokenizer": tokenizer,
             "device": device,
             "current_model_type": model_type
         })
@@ -166,122 +173,66 @@ def load_models(model_type="english"):
 
     except Exception as e:
         print(f"Error loading models: {e}")
-        raise e
-
-def parse_output(generated_ids):
-    """Parse output tokens to audio codes"""
-    token_to_find = 128257
-    token_to_remove = 128258
-    
-    token_indices = (generated_ids == token_to_find).nonzero(as_tuple=True)
-
-    if len(token_indices[1]) > 0:
-        last_occurrence_idx = token_indices[1][-1].item()
-        cropped_tensor = generated_ids[:, last_occurrence_idx+1:]
-    else:
-        cropped_tensor = generated_ids
-
-    processed_rows = []
-    for row in cropped_tensor:
-        masked_row = row[row != token_to_remove]
-        processed_rows.append(masked_row)
-
-    code_lists = []
-    for row in processed_rows:
-        row_length = row.size(0)
-        new_length = (row_length // 7) * 7
-        trimmed_row = row[:new_length]
-        trimmed_row = [t - 128266 for t in trimmed_row]
-        code_lists.append(trimmed_row)
-        
-    return code_lists[0] if code_lists else []
+        raise
 
 def redistribute_codes(code_list, snac_model):
-    """Redistribute codes for audio generation"""
-    try:
-        device = next(snac_model.parameters()).device
-        
-        if not code_list or len(code_list) < 7:
-            print(f"Warning: code_list is too short: {len(code_list) if code_list else 0} elements")
-            return np.zeros(24000, dtype=np.float32)
-        
-        layer_1 = []
-        layer_2 = []
-        layer_3 = []
-        
-        for i in range((len(code_list)+1)//7):
-            if 7*i < len(code_list):
-                layer_1.append(code_list[7*i])
-            if 7*i+1 < len(code_list):
-                layer_2.append(code_list[7*i+1]-4096)
-            if 7*i+2 < len(code_list):
-                layer_3.append(code_list[7*i+2]-(2*4096))
-            if 7*i+3 < len(code_list):
-                layer_3.append(code_list[7*i+3]-(3*4096))
-            if 7*i+4 < len(code_list):
-                layer_2.append(code_list[7*i+4]-(4*4096))
-            if 7*i+5 < len(code_list):
-                layer_3.append(code_list[7*i+5]-(5*4096))
-            if 7*i+6 < len(code_list):
-                layer_3.append(code_list[7*i+6]-(6*4096))
-        
-        codes = [
-            torch.tensor(layer_1, device=device).unsqueeze(0),
-            torch.tensor(layer_2, device=device).unsqueeze(0),
-            torch.tensor(layer_3, device=device).unsqueeze(0)
-        ]
-        
-        audio_hat = snac_model.decode(codes)
-        audio_hat_squeezed = audio_hat.squeeze()
-        
-        return audio_hat_squeezed.detach().cpu().numpy()
-        
-    except Exception as e:
-        print(f"Error in redistribute_codes: {e}")
-        return np.zeros(24000, dtype=np.float32)
+    """Decode validated codes without allocating an autograd graph."""
+    device = next(snac_model.parameters()).device
+    codes = [
+        torch.tensor(layer, dtype=torch.int64, device=device).unsqueeze(0)
+        for layer in split_codes(code_list)
+    ]
+    with torch.inference_mode():
+        audio = snac_model.decode(codes).squeeze().cpu().numpy()
+    if audio.size == 0 or not np.isfinite(audio).all():
+        raise ValueError("The audio decoder returned empty or non-finite samples.")
+    return audio
 
+
+@serialized_models
 def synthesize(text: str, voice: str, model_type: str, temperature: float, top_p: float, repetition_penalty: float, max_new_tokens: int):
     """Generate speech from text using Orpheus TTS"""
     if not text or not text.strip():
         return None, "Please enter text."
 
     try:
+        if model_type not in MODELS:
+            raise ValueError(f"Unknown model: {model_type}")
+        if voice not in MODELS[model_type]["voices"]:
+            voice = MODELS[model_type]["voices"][0]
+        if not 0.1 <= temperature <= 1.5 or not 0.1 <= top_p <= 1.0:
+            raise ValueError("Temperature or Top-p is outside the supported range.")
+        if not 1.0 <= repetition_penalty <= 2.0:
+            raise ValueError("Repetition Penalty must be between 1 and 2.")
+        if isinstance(max_new_tokens, bool) or int(max_new_tokens) != max_new_tokens or not 100 <= max_new_tokens <= 3500:
+            raise ValueError("Max New Tokens must be an integer between 100 and 3500.")
+        max_new_tokens = int(max_new_tokens)
         # Load models if not already loaded
         load_models(model_type)
         
         snac_model = LOADED_MODELS["snac_model"]
         orpheus_model = LOADED_MODELS["orpheus_model"]
-        tokenizer = LOADED_MODELS["tokenizer"]
-        device = LOADED_MODELS["device"]
-        
-        # Process the prompt for GGUF model
-        prompt = f"{voice}: {text}"
-
-        # Add special tokens manually
-        start_token = tokenizer.decode([128259])  # Start of human
-        end_tokens = tokenizer.decode([128009, 128260])  # End of text, End of human
-        full_prompt = start_token + prompt + end_tokens
-
-        # Generate tokens using llama-cpp-python
-        full_prompt_token_count = len(tokenizer.encode(full_prompt))
-        max_token_budget = ORPHEUS_N_CTX - full_prompt_token_count - 32
-        if max_token_budget < 1:
+        prompt_ids = build_prompt(orpheus_model, text.strip(), voice)
+        max_token_budget = orpheus_model.n_ctx() - len(prompt_ids)
+        if max_token_budget < 7:
             return None, "Prompt is too long for the model context."
         safe_max_tokens = min(max_new_tokens, max_token_budget)
 
-        output = orpheus_model(
-            full_prompt,
-            max_tokens=safe_max_tokens,
-            temperature=temperature,
+        # Keep generated IDs intact: decoding and re-encoding can lose special tokens.
+        stream = orpheus_model.generate(
+            prompt_ids,
+            temp=temperature,
             top_p=top_p,
             repeat_penalty=repetition_penalty,
-            stop=[tokenizer.decode([128258])],  # Stop token
-            echo=True  # Include prompt in output
         )
-
-        # Extract generated text and convert to token IDs
-        generated_text = output['choices'][0]['text']
-        generated_ids = torch.tensor([tokenizer.encode(generated_text)], dtype=torch.int64)
+        generated_ids = []
+        try:
+            for token in islice(stream, safe_max_tokens):
+                if token in (AUDIO_END, END_OF_TURN, orpheus_model.token_eos()):
+                    break
+                generated_ids.append(token)
+        finally:
+            stream.close()
         
         # Parse output and generate audio
         code_list = parse_output(generated_ids)
@@ -373,24 +324,17 @@ with gr.Blocks(title="Orpheus TTS – Multi-Model") as demo:
         outputs=[voice]
     )
 
-    def _on_click(text, voice, model_type, temperature, top_p, repetition_penalty, max_new_tokens):
-        # Validate voice is in correct model's voice list
-        if voice not in MODELS[model_type]["voices"]:
-            # Use first voice of selected model if current voice is invalid
-            voice = MODELS[model_type]["voices"][0]
-            
-        wav_path, status = synthesize(text, voice, model_type, temperature, top_p, repetition_penalty, int(max_new_tokens))
-        return wav_path, status
-
     run_btn.click(
-        fn=_on_click,
+        fn=synthesize,
         inputs=[text, voice, model_selection, temperature, top_p, repetition_penalty, max_new_tokens],
         outputs=[out_audio, out_status],
+        api_name="synthesize",
+        concurrency_limit=1,
     )
 
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument("--port", type=int, default=7860, help="Gradio server port (Pinokio sets via {{port}})")
+    parser.add_argument("--port", type=int, default=None, help="Gradio server port (default: next available port)")
     args = parser.parse_args()
     demo.launch(server_name="127.0.0.1", server_port=args.port, share=False)
