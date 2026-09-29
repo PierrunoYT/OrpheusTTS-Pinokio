@@ -148,16 +148,11 @@ def load_models(model_type="english"):
 
         # Load GGUF model with llama-cpp-python
         print("Loading Orpheus GGUF model...")
-        n_gpu_layers = -1 if device == "cuda" else 0  # Use all GPU layers if CUDA available
-        
-        if device == "cuda":
-            print(f"Using GPU with {n_gpu_layers} layers")
-        else:
-            print("Using CPU")
-            
+        # Offload every layer to whatever GPU backend llama.cpp was built with
+        # (CUDA, Metal, ...); CPU-only builds ignore this setting.
         orpheus_model = Llama(
             model_path=model_path,
-            n_gpu_layers=n_gpu_layers,
+            n_gpu_layers=-1,
             verbose=True,  # Enable verbose to see GPU info
             n_ctx=ORPHEUS_N_CTX,  # Context window
             n_threads=4,  # CPU threads

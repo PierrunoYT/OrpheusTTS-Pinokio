@@ -18,7 +18,7 @@ After **Start**, choose a language and voice, enter text, and click **Convert to
 
 Install shows **Start** only after dependency and import checks succeed. Existing installations made before this check was introduced need to run **Install** once. Failed installs can be retried with **Install** without deleting downloaded models or audio.
 
-NVIDIA installation builds llama-cpp-python with CUDA and needs a working CUDA compiler/toolchain in Pinokio. CPU inference remains available on other systems. Linux AMD uses ROCm for SNAC; this launcher does not configure a ROCm llama.cpp build. Windows AMD uses CPU inference. macOS currently uses CPU inference in the app; Intel macOS uses the last compatible PyTorch release (2.2.2). Performance and available acceleration depend on the installed drivers and native libraries.
+NVIDIA installation builds llama-cpp-python with CUDA and needs a working CUDA compiler/toolchain in Pinokio. CPU inference remains available on other systems. Linux AMD uses ROCm for SNAC; this launcher does not configure a ROCm llama.cpp build. Windows AMD uses CPU inference. On Apple Silicon, the GGUF model runs on Metal (llama-cpp-python's default macOS build) while SNAC decoding uses the CPU; Intel macOS uses the last compatible PyTorch release (2.2.2). Performance and available acceleration depend on the installed drivers and native libraries.
 
 The optional environment variables `ORPHEUS_REPO` and `ORPHEUS_FILENAME` replace the English GGUF; it must use the Orpheus token protocol and voice names. `SNAC_MODEL` overrides the default `hubertsiuzdak/snac_24khz` decoder and must remain compatible with its codebooks and 24 kHz output.
 
