@@ -54,7 +54,9 @@ module.exports = {
         venv: "env",
         path: "app",
         message: [
-          "uv pip check",
+          // Pinokio halts on "Error:" output, not exit codes, and uv pip check prints no such line.
+          // Parenthesized: cmd.exe would otherwise parse "A || B && C" as "A || (B && C)".
+          "(uv pip check || python -c \"raise SystemExit('Error: uv pip check found incompatible dependencies')\")",
           "python -c \"import app; assert app.IMPORTS_SUCCESSFUL, 'Required inference libraries failed to import'\""
         ]
       }

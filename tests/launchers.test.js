@@ -41,7 +41,7 @@ test('all install branches reach verification before marking the environment rea
     const builds = selected.filter(s => typeof s.params.message === 'string' && s.params.message.includes('llama-cpp-python'))
     assert.equal(builds.length, 1)
     if (gpu === 'nvidia') assert.match(builds[0].params.message, /--no-binary llama-cpp-python/)
-    assert.equal(selected.at(-2).params.message[0], 'uv pip check')
+    assert.match(selected.at(-2).params.message[0], /^\(uv pip check \|\| .*Error: .*\)$/)
     assert.equal(selected.at(-1).params.path, 'app/env/.installed')
   }
 })
