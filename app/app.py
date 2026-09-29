@@ -155,7 +155,6 @@ def load_models(model_type="english"):
             n_gpu_layers=-1,
             verbose=True,  # Enable verbose to see GPU info
             n_ctx=ORPHEUS_N_CTX,  # Context window
-            n_threads=4,  # CPU threads
         )
 
         LOADED_MODELS.update({
