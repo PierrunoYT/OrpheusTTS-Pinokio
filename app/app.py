@@ -199,7 +199,7 @@ def synthesize(text: str, voice: str, model_type: str, temperature: float, top_p
         if model_type not in MODELS:
             raise ValueError(f"Unknown model: {model_type}")
         if voice not in MODELS[model_type]["voices"]:
-            voice = MODELS[model_type]["voices"][0]
+            raise ValueError(f"Unknown voice for {model_type}: {voice}")
         if not 0.1 <= temperature <= 1.5 or not 0.1 <= top_p <= 1.0:
             raise ValueError("Temperature or Top-p is outside the supported range.")
         if not 1.0 <= repetition_penalty <= 2.0:
@@ -305,7 +305,8 @@ with gr.Blocks(title="Orpheus TTS – Multi-Model") as demo:
         )
     
     with gr.Row():
-        voice = gr.Dropdown(MODELS["english"]["voices"], value="tara", label="Voice")
+        # API clients have no session copy of the updated choices; synthesize() validates voices.
+        voice = gr.Dropdown(MODELS["english"]["voices"], value="tara", label="Voice", allow_custom_value=True)
     
     with gr.Row():
         temperature = gr.Slider(minimum=0.1, maximum=1.5, value=0.6, step=0.05, label="Temperature")

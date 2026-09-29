@@ -108,10 +108,18 @@ class SynthesisTests(unittest.TestCase):
 
     def test_bad_api_inputs_do_not_load_or_generate(self):
         for args in ({"model_type": "../bad"}, {"max_new_tokens": 0},
-                     {"max_new_tokens": 100.5}, {"temperature": float("nan")}, {"top_p": 2}):
+                     {"max_new_tokens": 100.5}, {"temperature": float("nan")}, {"top_p": 2},
+                     {"voice": "Jana"}):
             with self.subTest(args=args):
                 self.assertIsNone(self.synthesize(**args)[0])
         self.model.generate.assert_not_called()
+
+    def test_non_english_voice_is_accepted(self):
+        self.model.generate.return_value = iter_generator(frame())
+        with patch.object(self.app, "load_models"):
+            path, status = self.synthesize(voice="Jana", model_type="german")
+        self.assertEqual(status, "Done!")
+        self.model.tokenize.assert_called_once_with(b"Jana: Hello", add_bos=True, special=False)
 
     def test_unknown_model_does_not_unload_existing_model(self):
         with self.assertRaises(ValueError):
