@@ -9,9 +9,4 @@ huggingface_hub>=0.16.0
 # Web Interface
 gradio>=5.0.0
 
-# Standard Library Dependencies (included for completeness)
-# pathlib - built into Python 3.4+
-# datetime - built into Python standard library
-# re - built into Python standard library
-# os - built into Python standard library
-# sys - built into Python standard library
+# Installed separately by the launchers: torch (torch.js), llama-cpp-python (install.js)

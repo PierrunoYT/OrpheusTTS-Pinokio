@@ -14,7 +14,7 @@ Reviewed all tracked source files, launcher scripts, metadata, and documentation
 
 ## Validation and remaining limits
 
-The offline suites contain 12 Python tests and 6 Node tests. Python compilation, JavaScript syntax checks, and Git whitespace checks also pass. Tests cover normal and malformed token streams, codebook boundaries, context limits, early stops, decoder errors, API input validation, installation branches, menu states, and URL capture.
+The offline suites contain 13 Python tests and 6 Node tests. Python compilation, JavaScript syntax checks, and Git whitespace checks also pass. Tests cover normal and malformed token streams, codebook boundaries, context limits, early stops, decoder errors, API input validation, installation branches, menu states, and URL capture.
 
 Native inference dependencies and model weights were not installed during this review. A fresh Pinokio install, real WAV generation in each language, concurrent native requests, and GPU/driver compatibility on Windows, Linux, and macOS remain unverified. Dependency versions are not fully locked; the install-time checks catch import and resolver failures but do not establish compatibility with every future release. This review does not establish that the codebase is free of all defects.
 

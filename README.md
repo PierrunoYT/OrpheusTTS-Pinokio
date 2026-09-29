@@ -80,9 +80,12 @@ The Python tests mock native inference libraries; they verify token handling and
 ```
 project-root/
 ├── app/
-│   ├── app.py
-│   └── requirements.txt
+│   ├── app.py              # Gradio UI, model loading, synthesis
+│   ├── audio_codes.py      # Orpheus token protocol and SNAC frame handling
+│   ├── requirements.txt
+│   └── tests/test_synthesis.py
+├── tests/launchers.test.js
 ├── install.js, start.js, update.js, reset.js, link.js, torch.js
 ├── pinokio.js, pinokio.json
-└── README.md
+└── README.md, REVIEW.md
 ```
