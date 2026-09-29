@@ -338,4 +338,5 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--port", type=int, default=None, help="Gradio server port (default: next available port)")
     args = parser.parse_args()
-    demo.launch(server_name="127.0.0.1", server_port=args.port, share=False)
+    # Gradio only serves returned files from the cwd or temp dir unless allowed here.
+    demo.launch(server_name="127.0.0.1", server_port=args.port, share=False, allowed_paths=[str(OUTPUT_DIR)])
