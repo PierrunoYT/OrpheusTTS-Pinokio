@@ -41,7 +41,11 @@ test('all install branches reach verification before marking the environment rea
     const builds = selected.filter(s => typeof s.params.message === 'string' && s.params.message.includes('llama-cpp-python'))
     assert.equal(builds.length, 1)
     if (gpu === 'nvidia') assert.match(builds[0].params.message, /--no-binary llama-cpp-python/)
-    assert.match(selected.at(-2).params.message[0], /^\(uv pip check \|\| .*Error: .*\)$/)
+    assert.match(selected.at(-2).params.message[0], /^\(uv pip check \|\| python -c .*\)$/)
+    // Pinokio fails a step whenever the echoed command text contains "error:".
+    for (const step of selected.filter(s => s.method === 'shell.run')) {
+      for (const command of [].concat(step.params.message)) assert.doesNotMatch(command, /error:/i)
+    }
     assert.equal(selected.at(-1).params.path, 'app/env/.installed')
   }
 })

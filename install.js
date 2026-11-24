@@ -54,9 +54,11 @@ module.exports = {
         venv: "env",
         path: "app",
         message: [
-          // Pinokio halts on "Error:" output, not exit codes, and uv pip check prints no such line.
+          // Pinokio fails a step when its output contains "error:", not on exit codes, and
+          // uv pip check prints no such line. The text is built from two pieces because the
+          // shell echoes each command: a literal "Error:" here would fail every install.
           // Parenthesized: cmd.exe would otherwise parse "A || B && C" as "A || (B && C)".
-          "(uv pip check || python -c \"raise SystemExit('Error: uv pip check found incompatible dependencies')\")",
+          "(uv pip check || python -c \"raise SystemExit('Error' + ': uv pip check found incompatible dependencies')\")",
           "python -c \"import app; assert app.IMPORTS_SUCCESSFUL, 'Required inference libraries failed to import'\""
         ]
       }
